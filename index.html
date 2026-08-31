@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#3d2b1f">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PFB App">
+<title>PFB · Calculadora de Recetas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:#f5f0e8; --warm:#ede5d4; --brown:#3d2b1f; --caramel:#c17f3a;
+    --rust:#a0522d; --gold:#d4a843; --text:#2a1f14; --muted:#7a6350;
+    --border:#d4c4a8; --card:#faf7f2; --shadow:rgba(61,43,31,0.12); --green:#4a7c59;
+  }
+  html{background:#3d2b1f}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Mono',monospace;background:#f5f0e8;color:#2a1f14;min-height:100vh;
+    background-image:radial-gradient(ellipse at 20% 0%,rgba(193,127,58,.08) 0%,transparent 60%),
+    radial-gradient(ellipse at 80% 100%,rgba(160,82,45,.06) 0%,transparent 60%);
+    padding-bottom:env(safe-area-inset-bottom)}
+
+header{background:#3d2b1f;padding:20px 40px;padding-top:calc(20px + env(safe-area-inset-top));display:flex;align-items:center;
+justify-content:space-between;position:sticky;top:0;z-index:100;
+box-shadow:0 4px 20px rgba(61,43,31,.3)}
+.header-left{display:flex;align-items:center;gap:16px}
+.logo-icon{width:40px;height:40px;background:var(--caramel);border-radius:50%;
+display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+header h1{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--cream)}
+header p{font-size:.65rem;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
+.btn-header{padding:9px 18px;font-family:'DM Mono',monospace;font-size:.75rem;letter-spacing:.06em;
+background:transparent;color:var(--gold);border:1.5px solid var(--gold);border-radius:8px;
+cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-header:hover{background:var(--gold);color:var(--brown)}
+
+.main{max-width:860px;margin:0 auto;padding:36px 24px 80px}
+
+.panel{background:var(--card);border:1px solid var(--border);border-radius:16px;
+padding:28px 32px;margin-bottom:24px;box-shadow:0 2px 16px var(--shadow)}
+.panel-title{font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+
+.field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:160px}
+.field label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.field select,.field input[type=number],.field input[type=text]{
+padding:11px 14px;font-family:'DM Mono',monospace;font-size:.9rem;
+background:var(--cream);border:1.5px solid var(--border);border-radius:10px;
+color:var(--text);outline:none;transition:border-color .2s;width:100%;-moz-appearance:textfield}
+.field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none}
+.field select:focus,.field input:focus{border-color:var(--caramel)}
+
+/* preview */
+#recetaPreview{display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
+.preview-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap}
+.preview-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--brown)}
+.btn-edit-receta{padding:6px 14px;font-family:'DM Mono',monospace;font-size:.72rem;
+background:none;border:1.5px solid var(--border);border-radius:7px;color:var(--muted);
+cursor:pointer;transition:all .15s}
+.btn-edit-receta:hover{border-color:var(--caramel);color:var(--caramel)}
+.preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.preview-ing{display:flex;justify-content:space-between;align-items:center;
+padding:7px 12px;background:var(--warm);border-radius:7px;font-size:.78rem}
+.preview-ing .pi-name{color:var(--text)}
+.preview-ing .pi-pct{color:var(--caramel);font-weight:500;margin-left:8px;white-space:nowrap}
+
+/* calc row */
+.calc-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.calc-btn{padding:12px 28px;font-family:'DM Mono',monospace;font-size:.85rem;font-weight:500;
+letter-spacing:.08em;background:var(--caramel);color:#fff;border:none;border-radius:10px;
+cursor:pointer;transition:background .2s,transform .1s;white-space:nowrap;flex-shrink:0}
+.calc-btn:hover{background:var(--rust)}
+.calc-btn:active{transform:scale(.97)}
+
+/* resultado */
+#resultado{display:none}
+.result-header{display:flex;align-items:baseline;justify-content:space-between;
+margin-bottom:20px;flex-wrap:wrap;gap:8px}
+.result-title{font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--brown)}
+.result-meta{font-size:.72rem;color:var(--muted);letter-spacing:.1em}
+.result-meta span{color:var(--caramel);font-weight:500}
+.totals-strip{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.total-chip{flex:1;min-width:110px;background:var(--brown);color:var(--cream);
+border-radius:10px;padding:14px 16px;text-align:center}
+.total-chip-editable{cursor:pointer;transition:background .2s}
+.total-chip-editable:hover{background:#5a3b2a}
+.harina-input{width:100%;background:transparent;border:none;border-bottom:1.5px solid var(--gold);
+color:var(--cream);font-family:'Playfair Display',serif;font-size:1.35rem;text-align:center;
+outline:none;padding:2px 0;-moz-appearance:textfield}
+.harina-input::-webkit-outer-spin-button,.harina-input::-webkit-inner-spin-button{-webkit-appearance:none}
+.hid-dot{position:absolute;top:7px;right:7px;width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.total-chip{position:relative;}
+.total-chip .tc-label{font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:4px}
+.total-chip .tc-val{font-family:'Playfair Display',serif;font-size:1.35rem}
+.ing-table{width:100%;border-collapse:collapse}
+.ing-table th{font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+padding:8px 14px;text-align:left;border-bottom:1px solid var(--border)}
+.ing-table th:last-child{text-align:right}
+.ing-table td{padding:12px 14px;font-size:.84rem;border-bottom:1px solid rgba(212,196,168,.4);vertical-align:middle}
+.ing-table td:last-child{text-align:right}
+.ing-table tr:last-child td{border-bottom:none}
+.ing-table tr:hover td{background:rgba(212,196,168,.15)}
+.ing-name{color:var(--text);font-weight:500}
+.ing-pct{color:var(--muted);font-size:.75rem}
+.ing-qty{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--brown)}
+.ing-unit{color:var(--muted);font-size:.7rem;margin-left:4px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--caramel);margin-right:10px;vertical-align:middle}
+.section-row td{padding:14px 14px 5px;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
+color:var(--caramel);border-bottom:none;background:none!important}
+.prefermento-box{margin-top:18px;padding:14px 18px;background:var(--warm);
+border:1px solid var(--border);border-radius:10px;font-size:.8rem}
+.prefermento-box .pb-title{font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--rust);margin-bottom:10px}
+.prefermento-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.pf-item .pf-n{font-size:.68rem;color:var(--muted)}
+.pf-item .pf-v{font-family:'Playfair Display',serif;font-size:1rem;color:var(--brown)}
+
+/* modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(42,31,20,.55);
+backdrop-filter:blur(3px);z-index:200;align-items:flex-start;justify-content:center;
+padding:40px 16px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px;
+width:100%;max-width:620px;box-shadow:0 8px 40px rgba(42,31,20,.3);position:relative}
+.modal-title{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--brown);margin-bottom:6px}
+.modal-subtitle{font-size:.72rem;color:var(--muted);margin-bottom:24px;letter-spacing:.05em}
+.modal-close{position:absolute;top:20px;right:20px;background:none;border:none;
+font-size:1.3rem;cursor:pointer;color:var(--muted);line-height:1;padding:4px}
+.modal-close:hover{color:var(--brown)}
+.form-field{margin-bottom:16px}
+.form-field label{display:block;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;
+color:var(--muted);margin-bottom:6px}
+.form-field input{width:100%;padding:10px 14px;font-family:'DM Mono',monospace;font-size:.9rem;
+background:var(--cream);border:1.5px solid var(--border);border-radius:10px;color:var(--text);outline:none}
+.form-field input:focus{border-color:var(--caramel)}
+.ing-form-section{margin-top:20px;margin-bottom:16px}
+.ing-form-title{font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.ing-rows{display:flex;flex-direction:column;gap:8px}
+.ing-row-header{display:grid;grid-template-columns:52px 1fr 100px 36px;gap:6px;margin-bottom:4px}
+.ing-row-header span{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:0 4px}
+.ing-row{display:grid;grid-template-columns:52px 1fr 100px 36px;gap:6px;align-items:center}
+.btn-move{width:22px;height:26px;background:none;border:1.5px solid var(--border);border-radius:5px;
+cursor:pointer;color:var(--muted);font-size:.6rem;display:flex;align-items:center;
+justify-content:center;transition:all .15s;padding:0;flex-shrink:0}
+.btn-move:hover{border-color:var(--caramel);color:var(--caramel)}
+.move-col{display:flex;flex-direction:row;gap:3px;align-items:center}
+.ing-row input{padding:9px 12px;font-family:'DM Mono',monospace;font-size:.85rem;
+background:var(--cream);border:1.5px solid var(--border);border-radius:8px;
+color:var(--text);outline:none;width:100%;-moz-appearance:textfield}
+.ing-row input::-webkit-outer-spin-button,.ing-row input::-webkit-inner-spin-button{-webkit-appearance:none}
+.ing-row input:focus{border-color:var(--caramel)}
+.ing-row input.pct-input{text-align:right}
+.btn-remove-ing{width:34px;height:34px;background:none;border:1.5px solid var(--border);
+border-radius:8px;cursor:pointer;color:var(--muted);font-size:.9rem;
+display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.btn-remove-ing:hover{border-color:#c0392b;color:#c0392b}
+.btn-add-ing{margin-top:10px;padding:8px 16px;font-family:'DM Mono',monospace;font-size:.78rem;
+background:none;border:1.5px dashed var(--border);border-radius:8px;color:var(--muted);
+cursor:pointer;width:100%;transition:all .2s}
+.btn-add-ing:hover{border-color:var(--caramel);color:var(--caramel)}
+.modal-actions{display:flex;gap:10px;justify-content:space-between;align-items:center;
+margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+.modal-actions-right{display:flex;gap:10px}
+.btn-cancel{padding:10px 20px;font-family:'DM Mono',monospace;font-size:.82rem;
+background:none;border:1.5px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer}
+.btn-cancel:hover{border-color:var(--muted)}
+.btn-guardar{padding:10px 24px;font-family:'DM Mono',monospace;font-size:.82rem;font-weight:500;
+background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s}
+.btn-guardar:hover{opacity:.88}
+.btn-delete{padding:10px 16px;font-family:'DM Mono',monospace;font-size:.82rem;
+background:none;border:1.5px solid #c0392b;border-radius:8px;color:#c0392b;cursor:pointer;transition:all .2s}
+.btn-delete:hover{background:#c0392b;color:#fff}
+.badge-custom{display:inline-block;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+background:var(--green);color:#fff;border-radius:4px;padding:2px 6px;margin-left:6px;vertical-align:middle}
+.notes-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.notes-label{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.notes-input-wrap{display:flex;flex-direction:column;gap:6px}
+.notes-textarea{width:100%;padding:9px 12px;font-family:'DM Mono',monospace;font-size:.82rem;
+background:var(--cream);border:1.5px solid var(--border);border-radius:8px;
+color:var(--text);outline:none;transition:border-color .2s;resize:none;
+line-height:1.5;height:calc(1.5em * 3 + 18px)}
+.notes-textarea:focus{border-color:var(--caramel)}
+.notes-input-footer{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.notes-char{font-size:.65rem;color:var(--muted);white-space:nowrap}
+.notes-char.over{color:#c0392b}
+.notes-save-btn{padding:6px 14px;font-family:'DM Mono',monospace;font-size:.75rem;
+background:var(--caramel);color:#fff;border:none;border-radius:7px;cursor:pointer;transition:opacity .2s}
+.notes-save-btn:hover{opacity:.85}
+.notes-saved{font-size:.78rem;color:var(--text);padding:8px 12px;background:var(--warm);
+border-radius:8px;font-style:italic;cursor:pointer;border:1.5px solid transparent;
+transition:border-color .2s;white-space:pre-wrap;line-height:1.6;
+display:block;overflow:visible;height:auto}
+.notes-saved:hover{border-color:var(--border)}
+.notes-empty{font-size:.75rem;color:var(--muted);font-style:italic}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);
+background:var(--brown);color:var(--cream);padding:12px 24px;border-radius:10px;
+font-size:.82rem;letter-spacing:.05em;box-shadow:0 4px 20px rgba(0,0,0,.25);
+transition:transform .35s cubic-bezier(.34,1.56,.64,1);z-index:999;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+@media(max-width:600px){
+header{padding:16px 18px}
+header h1{font-size:1.2rem}
+.btn-header span{display:none}
+.main{padding:20px 14px 60px}
+.panel{padding:20px 18px}
+.result-title{font-size:1.3rem}
+.modal{padding:24px 18px}
+}
+</style>
+
+
+<style id="pfb-v31-safearea">
+header{
+  padding-top:calc(20px + env(safe-area-inset-top));
+  padding-right:max(20px, calc(20px + env(safe-area-inset-right)));
+  padding-left:max(20px, calc(20px + env(safe-area-inset-left)));
+}
+.btn-header{position:relative;z-index:1001;min-height:44px;touch-action:manipulation}
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <img src="data:image/png;base64,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" style="width:48px;height:48px;border-radius:12px;object-fit:cover;flex-shrink:0;">
+    <div>
+      <h1>PFB · Recetas</h1>
+      <p>Calculadora de ingredientes</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center"><button class="btn-header" onclick="pfbOpenSyncSetup()" title="Configurar sincronización">☁</button><button class="btn-header" onclick="abrirModal(null)">+ <span>Nueva receta</span></button></div>
+</header>
+
+<div class="main">
+
+  <div class="panel">
+    <div class="panel-title">01 · Elegí el producto</div>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+      <div class="field">
+        <label>Receta</label>
+        <select id="recetaSelect" onchange="onSelectReceta()">
+          <option value="">— Seleccioná una receta —</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="recetaPreview">
+      <div class="preview-header">
+        <div class="preview-title" id="previewNombre"></div>
+        <button class="btn-edit-receta" id="btnEditReceta" onclick="editarRecetaActual()" style="display:none">✏ Editar</button>
+      </div>
+      <div class="preview-grid" id="previewGrid"></div>
+      <div class="notes-section">
+        <div class="notes-label">Notas</div>
+        <div id="notasDisplay"></div>
+        <div class="notes-input-wrap" id="notasEditWrap" style="display:none">
+          <textarea class="notes-textarea" id="notasInput" placeholder="Escribí hasta 3 líneas de 75 caracteres…" oninput="updateCharCount()"></textarea>
+          <div class="notes-input-footer">
+            <span class="notes-char" id="notasChar">225 caracteres restantes</span>
+            <button class="notes-save-btn" onclick="guardarNota()">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">02 · Cantidad y peso por pieza</div>
+    <div class="calc-row">
+      <div class="field" style="max-width:110px">
+        <label>Piezas</label>
+        <input type="number" id="cantPiezas" value="10" min="1" step="1">
+      </div>
+      <div class="field" style="max-width:130px">
+        <label>Peso/pieza</label>
+        <input type="number" id="pesoPieza" value="100" min="1" step="5">
+      </div>
+      <div class="field" style="max-width:120px">
+        <label>Unidad</label>
+        <select id="pesoUnit">
+          <option value="g">gramos (g)</option>
+          <option value="kg">kilogramos (kg)</option>
+        </select>
+      </div>
+      <button class="calc-btn" onclick="calcular()">Calcular →</button>
+    </div>
+    <div style="margin-top:10px;font-size:.72rem;color:var(--muted)" id="masaPreview"></div>
+  </div>
+
+  <div class="panel" id="resultado">
+    <div class="result-header">
+      <div class="result-title" id="resNombre"></div>
+      <div class="result-meta">Piezas: <span id="resPiezas"></span> · Masa: <span id="resMasa"></span> · Harina: <span id="resHarina"></span></div>
+    </div>
+    <div class="totals-strip" id="totalsStrip"></div>
+    <table class="ing-table">
+      <thead><tr><th>Ingrediente</th><th>%</th><th>Cantidad</th></tr></thead>
+      <tbody id="ingBody"></tbody>
+    </table>
+    <div id="prefermentoBox"></div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="onOverlayClick(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="cerrarModal()">✕</button>
+    <div class="modal-title" id="modalTitle">Nueva receta</div>
+    <div class="modal-subtitle">Los porcentajes son baker's % sobre la harina total</div>
+
+    <input type="hidden" id="editandoNombre">
+
+    <div class="form-field">
+      <label>Nombre de la receta</label>
+      <input type="text" id="nuevaNombre" placeholder="Ej: Focaccia romana">
+    </div>
+
+    <div class="ing-form-section">
+      <div class="ing-form-title">Harinas (deben sumar 100%)</div>
+      <div class="ing-row-header">
+        <span></span><span>Tipo de harina</span><span style="text-align:right">% sobre harina</span><span></span>
+      </div>
+      <div class="ing-rows" id="harinasRows"></div>
+      <button class="btn-add-ing" onclick="addHarinaRow()">+ Agregar harina</button>
+    </div>
+
+    <div class="ing-form-section">
+      <div class="ing-form-title">Ingredientes</div>
+      <div class="ing-row-header">
+        <span></span><span>Ingrediente</span><span style="text-align:right">% sobre harina</span><span></span>
+      </div>
+      <div class="ing-rows" id="ingRows"></div>
+      <button class="btn-add-ing" onclick="addIngRow()">+ Agregar ingrediente</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-delete" id="btnEliminar" style="display:none" onclick="eliminarReceta()">🗑 Eliminar</button>
+      <div class="modal-actions-right">
+        <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+        <button class="btn-guardar" onclick="guardarReceta()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<datalist id="harinaSuggestions">
+  <option value="000"><option value="0000"><option value="Semolin">
+  <option value="Harina Maiz"><option value="Harina integral">
+  <option value="Harina de mandioca"><option value="Mandioca"><option value="Harina de arroz">
+  <option value="Harina de centeno"><option value="Harina de espelta">
+</datalist>
+<datalist id="ingSuggestions">
+  <option value="Agua"><option value="Leche fluida"><option value="Leche"><option value="Levadura">
+  <option value="Azucar"><option value="Manteca"><option value="Grasa">
+  <option value="Papa pisada"><option value="Leche en Polvo"><option value="Miel">
+  <option value="Extracto Malta"><option value="Oliva"><option value="Thang Zhong">
+  <option value="Aceite Neutro"><option value="Esencia Vainilla"><option value="Sal">
+  <option value="Manteca empaste"><option value="Margarina empaste">
+  <option value="Grasa empaste"><option value="Harina empaste">
+  <option value="Huevos"><option value="Poolish"><option value="Biga"><option value="Masa madre">
+</datalist>
+
+<script>
+// ── CONSTANTES ──────────────────────────────────────────────────────────────
+const HARINAS_TIPOS = ['000','0000','Semolin','Harina Maiz','Harina de mandioca','Mandioca','Harina integral','Harina de arroz','Harina de centeno','Harina de espelta'];
+const PREFERMENTO_NAMES = ['Poolish','Biga','Masa madre'];
+const HUMEDAD = {
+  'Agua':1,'Leche fluida':1,'Leche':1,'Poolish':1,'Biga':1,'Masa madre':1,
+  'Papa pisada':.75,'Huevos':.75,
+  'Manteca':.15,'Manteca empaste':.15,'Margarina empaste':.15,'Grasa':.15,
+  'Miel':.18,'Thang Zhong':.80,
+  'Queso semiduro':0,'Queso duro':0,'Queso crema':0,'Bicarbonato':0,
+};
+
+// ── RECETAS BASE ─────────────────────────────────────────────────────────────
+const RECETAS_BASE = [
+  // CAMBIO 1: Baciatta agrega Oliva 5%
+  {n:'Baciatta',i:[{n:'000',p:.9},{n:'Semolin',p:.1},{n:'Agua',p:.75},{n:'Levadura',p:.01},{n:'Sal',p:.02},{n:'Oliva',p:.05}]},
+  {n:'Bagels con huevo',i:[{n:'0000',p:1},{n:'Leche fluida',p:.25},{n:'Levadura',p:.03},{n:'Huevos',p:.25},{n:'Azucar',p:.1},{n:'Miel',p:.05},{n:'Aceite Neutro',p:.12},{n:'Sal',p:.02}]},
+  {n:'Bagels old School',i:[{n:'000',p:1},{n:'Agua',p:.56},{n:'Levadura',p:.02},{n:'Extracto Malta',p:.06},{n:'Sal',p:.02}]},
+  {n:'Bao',i:[{n:'0000',p:1},{n:'Agua',p:.5},{n:'Levadura',p:.04},{n:'Azucar',p:.08},{n:'Sal',p:.02}]},
+  {n:'Brioche 30',i:[{n:'000',p:1},{n:'Leche fluida',p:.09},{n:'Levadura',p:.05},{n:'Huevos',p:.5},{n:'Azucar',p:.12},{n:'Manteca',p:.3},{n:'Sal',p:.015}]},
+  {n:'Brioche para sandwich',i:[{n:'000',p:1},{n:'Agua',p:.14},{n:'Levadura',p:.03},{n:'Azucar',p:.07},{n:'Manteca',p:.35},{n:'Sal',p:.02}]},
+  {n:'Clasico Masa Madre',i:[{n:'000',p:.9},{n:'Semolin',p:.1},{n:'Masa madre',p:.2},{n:'Agua',p:.7},{n:'Sal',p:.02}]},
+  {n:'Cremona',i:[{n:'0000',p:1},{n:'Agua',p:.52},{n:'Levadura',p:.04},{n:'Azucar',p:.02},{n:'Grasa',p:.04},{n:'Oliva',p:.01},{n:'Sal',p:.03},{n:'Margarina empaste',p:.1},{n:'Grasa empaste',p:.1},{n:'Harina empaste',p:.05}]},
+  {n:'Criollitos',i:[{n:'000',p:1},{n:'Agua',p:.5},{n:'Levadura',p:.03},{n:'Grasa',p:.03},{n:'Miel',p:.02},{n:'Sal',p:.03},{n:'Grasa empaste',p:.3},{n:'Harina empaste',p:.065}]},
+  {n:'Croissants',i:[{n:'000',p:.8},{n:'0000',p:.2},{n:'Agua',p:.4},{n:'Leche fluida',p:.1},{n:'Levadura',p:.05},{n:'Azucar',p:.1},{n:'Manteca',p:.1},{n:'Sal',p:.02},{n:'Manteca empaste',p:.4}]},
+  {n:'English Muffin',i:[{n:'0000',p:1},{n:'Leche fluida',p:.56},{n:'Levadura',p:.02},{n:'Azucar',p:.04},{n:'Manteca',p:.1},{n:'Sal',p:.02}]},
+  {n:'Falsa Ciabatta',i:[{n:'000',p:.9},{n:'Semolin',p:.1},{n:'Agua',p:.65},{n:'Levadura',p:.04},{n:'Oliva',p:.08},{n:'Sal',p:.02}]},
+  {n:'Falsa Piadina',i:[{n:'000',p:1},{n:'Agua',p:.7},{n:'Levadura',p:.01},{n:'Oliva',p:.02},{n:'Sal',p:.02}]},
+  {n:'Fatay',i:[{n:'0000',p:1},{n:'Agua',p:.54},{n:'Levadura',p:.01},{n:'Oliva',p:.02},{n:'Sal',p:.02}]},
+  {n:'Figazitas de manteca',i:[{n:'000',p:1},{n:'Agua',p:.52},{n:'Levadura',p:.03},{n:'Grasa',p:.12},{n:'Miel',p:.03},{n:'Sal',p:.025}]},
+  {n:'Focaccia (Biga)',i:[{n:'000',p:1},{n:'Biga',p:.4},{n:'Agua',p:.8},{n:'Levadura',p:.01},{n:'Sal',p:.02}]},
+  {n:'Focaccia 80',i:[{n:'000',p:.9},{n:'Semolin',p:.1},{n:'Agua',p:.8},{n:'Levadura',p:.01},{n:'Oliva',p:.02},{n:'Sal',p:.02}]},
+  {n:'Focaccia con Masa Madre',i:[{n:'000',p:.9},{n:'Semolin',p:.1},{n:'Masa madre',p:.3},{n:'Agua',p:.8},{n:'Oliva',p:.05},{n:'Sal',p:.02}]},
+  {n:'Jalah',i:[{n:'000',p:1},{n:'Agua',p:.35},{n:'Levadura',p:.05},{n:'Huevos',p:.25},{n:'Azucar',p:.08},{n:'Manteca',p:.08},{n:'Aceite Neutro',p:.075},{n:'Sal',p:.02}]},
+  {n:'Kachapuri',i:[{n:'0000',p:1},{n:'Agua',p:.35},{n:'Leche fluida',p:.25},{n:'Levadura',p:.01},{n:'Azucar',p:.02},{n:'Oliva',p:.03},{n:'Sal',p:.02}]},
+  {n:'Kaiser Philly',i:[{n:'000',p:.5},{n:'0000',p:.5},{n:'Leche fluida',p:.5},{n:'Levadura',p:.03},{n:'Huevos',p:.1},{n:'Azucar',p:.06},{n:'Manteca',p:.12},{n:'Miel',p:.02},{n:'Sal',p:.02}]},
+  {n:'Kaiser Philly (leche en polvo)',i:[{n:'000',p:.6},{n:'0000',p:.4},{n:'Agua',p:.5},{n:'Levadura',p:.03},{n:'Azucar',p:.06},{n:'Manteca',p:.1},{n:'Leche en Polvo',p:.07},{n:'Miel',p:.02},{n:'Sal',p:.02}]},
+  // CAMBIO 2: Medialunas de Grasa → nombre actualizado + empaste 13%/13%/10%
+  {n:'Medialunas de Grasa (Laminado)',i:[{n:'000',p:.3},{n:'0000',p:.7},{n:'Agua',p:.55},{n:'Levadura',p:.01},{n:'Sal',p:.03},{n:'Margarina empaste',p:.13},{n:'Grasa empaste',p:.13},{n:'Manteca empaste',p:.14},{n:'Harina empaste',p:.1}]},
+  {n:'Medialunas de Manteca',i:[{n:'000',p:.2},{n:'0000',p:.8},{n:'Leche fluida',p:.38},{n:'Levadura',p:.03},{n:'Huevos',p:.2},{n:'Azucar',p:.1},{n:'Miel',p:.04},{n:'Esencia Vainilla',p:.005},{n:'Sal',p:.02},{n:'Manteca empaste',p:.4}]},
+  {n:'Miñon',i:[{n:'000',p:1},{n:'Agua',p:.55},{n:'Levadura',p:.05},{n:'Extracto Malta',p:.01}]},
+  {n:'Molde St. John (poolish)',i:[{n:'000',p:1},{n:'Poolish',p:1},{n:'Agua',p:.313},{n:'Levadura',p:.02},{n:'Sal',p:.02}]},
+  {n:'Mollete',i:[{n:'000',p:.75},{n:'0000',p:.25},{n:'Agua',p:.6},{n:'Levadura',p:.04},{n:'Oliva',p:.1},{n:'Sal',p:.02}]},
+  {n:'Pan Blanco',i:[{n:'000',p:1},{n:'Agua',p:.65},{n:'Levadura',p:.05},{n:'Sal',p:.02}]},
+  {n:'Pan de Hamburguesa de papa',i:[{n:'000',p:1},{n:'Agua',p:.4},{n:'Levadura',p:.03},{n:'Azucar',p:.1},{n:'Manteca',p:.1},{n:'Papa pisada',p:.2},{n:'Leche en Polvo',p:.1},{n:'Sal',p:.02}]},
+  {n:'Pan de Hokkaido',i:[{n:'000',p:1},{n:'Leche fluida',p:.4},{n:'Levadura',p:.05},{n:'Huevos',p:.1},{n:'Azucar',p:.12},{n:'Manteca',p:.14},{n:'Leche en Polvo',p:.12},{n:'Thang Zhong',p:.45},{n:'Sal',p:.02}]},
+  {n:'Pan de Manteca',i:[{n:'000',p:1},{n:'Agua',p:.5},{n:'Levadura',p:.03},{n:'Azucar',p:.1},{n:'Manteca',p:.1},{n:'Sal',p:.025},{n:'Manteca empaste',p:.2},{n:'Harina empaste',p:.08}]},
+  {n:'Pan de Miga',i:[{n:'0000',p:1},{n:'Agua',p:.55},{n:'Levadura',p:.03},{n:'Azucar',p:.04},{n:'Manteca',p:.08},{n:'Sal',p:.02}]},
+  {n:'Pan de Molde Clasico',i:[{n:'0000',p:1},{n:'Leche fluida',p:.58},{n:'Levadura',p:.03},{n:'Azucar',p:.05},{n:'Manteca',p:.1},{n:'Miel',p:.05},{n:'Sal',p:.02}]},
+  {n:'Pan de Pancho #1 (Leche)',i:[{n:'0000',p:1},{n:'Leche fluida',p:.56},{n:'Levadura',p:.04},{n:'Azucar',p:.05},{n:'Manteca',p:.1},{n:'Extracto Malta',p:.01},{n:'Sal',p:.02}]},
+  {n:'Pan de Pancho #2 (Clasico)',i:[{n:'000',p:1},{n:'Agua',p:.56},{n:'Levadura',p:.04},{n:'Azucar',p:.06},{n:'Manteca',p:.1},{n:'Sal',p:.02}]},
+  {n:'Pan de Pancho #3 (Huevo)',i:[{n:'000',p:1},{n:'Agua',p:.2},{n:'Leche fluida',p:.35},{n:'Levadura',p:.021},{n:'Huevos',p:.1},{n:'Azucar',p:.1},{n:'Manteca',p:.0625},{n:'Leche en Polvo',p:.0375},{n:'Sal',p:.015}]},
+  {n:'Pan de Pizza',i:[{n:'000',p:1},{n:'Agua',p:.65},{n:'Levadura',p:.02},{n:'Oliva',p:.05},{n:'Aceite Neutro',p:.02}]},
+  {n:'Pan Ingles',i:[{n:'0000',p:1},{n:'Agua',p:.52},{n:'Levadura',p:.03},{n:'Azucar',p:.1},{n:'Manteca',p:.07},{n:'Leche en Polvo',p:.1},{n:'Extracto Malta',p:.01},{n:'Sal',p:.02}]},
+  {n:'Pan Pita',i:[{n:'000',p:1},{n:'Agua',p:.56},{n:'Levadura',p:.02},{n:'Oliva',p:.04},{n:'Sal',p:.02}]},
+  {n:'PBT Leche',i:[{n:'0000',p:1},{n:'Leche fluida',p:.6},{n:'Levadura',p:.05},{n:'Azucar',p:.05},{n:'Manteca',p:.1},{n:'Sal',p:.02}]},
+  {n:'PBT Leche en polvo',i:[{n:'000',p:1},{n:'Agua',p:.52},{n:'Levadura',p:.04},{n:'Azucar',p:.08},{n:'Manteca',p:.08},{n:'Leche en Polvo',p:.06},{n:'Extracto Malta',p:.01},{n:'Sal',p:.02}]},
+  {n:'Philly Stteak Bread',i:[{n:'000',p:.15},{n:'0000',p:.85},{n:'Agua',p:.35},{n:'Levadura',p:.03},{n:'Azucar',p:.06},{n:'Manteca',p:.1},{n:'Papa pisada',p:.3},{n:'Leche en Polvo',p:.06},{n:'Aceite Neutro',p:.02}]},
+  {n:'Pita con Poolish',i:[{n:'000',p:1},{n:'Poolish',p:.4},{n:'Agua',p:.56},{n:'Levadura',p:.01},{n:'Oliva',p:.1},{n:'Sal',p:.02}]},
+  {n:'Pizza Chicago',i:[{n:'000',p:.91},{n:'Harina Maiz',p:.09},{n:'Agua',p:.6},{n:'Levadura',p:.04},{n:'Azucar',p:.03},{n:'Aceite Neutro',p:.07},{n:'Sal',p:.02}]},
+  {n:'Pizza in Teglia',i:[{n:'000',p:.8},{n:'0000',p:.2},{n:'Agua',p:.72},{n:'Levadura',p:.01},{n:'Oliva',p:.02},{n:'Sal',p:.02}]},
+  {n:'Pizza Molde',i:[{n:'000',p:.8},{n:'0000',p:.2},{n:'Agua',p:.65},{n:'Levadura',p:.01},{n:'Oliva',p:.05},{n:'Sal',p:.02}]},
+  {n:'Pizza Napoletana',i:[{n:'000',p:1},{n:'Agua',p:.72},{n:'Levadura',p:.01},{n:'Sal',p:.02}]},
+  {n:'Pizza Sfogliatta',i:[{n:'000',p:1},{n:'Agua',p:.55},{n:'Levadura',p:.02},{n:'Oliva',p:.03},{n:'Sal',p:.02}]},
+  {n:'Pizza Soft',i:[{n:'000',p:1},{n:'Agua',p:.45},{n:'Leche fluida',p:.15},{n:'Levadura',p:.05},{n:'Azucar',p:.04},{n:'Aceite Neutro',p:.025},{n:'Sal',p:.02}]},
+  {n:'Pletsalej',i:[{n:'0000',p:1},{n:'Agua',p:.4},{n:'Levadura',p:.04},{n:'Huevos',p:.1},{n:'Azucar',p:.1},{n:'Aceite Neutro',p:.1},{n:'Sal',p:.02}]},
+  {n:'Rosetta',i:[{n:'000',p:1},{n:'Agua',p:.5},{n:'Levadura',p:.03},{n:'Grasa',p:.1},{n:'Extracto Malta',p:.01},{n:'Sal',p:.02}]},
+  {n:'Sacramento',i:[{n:'0000',p:1},{n:'Agua',p:.54},{n:'Levadura',p:.04},{n:'Azucar',p:.06},{n:'Extracto Malta',p:.01},{n:'Sal',p:.02},{n:'Margarina empaste',p:.1},{n:'Grasa empaste',p:.1},{n:'Harina empaste',p:.05}]},
+  {n:'Sliders de papa',i:[{n:'000',p:1},{n:'Agua',p:.2},{n:'Leche fluida',p:.15},{n:'Levadura',p:.04},{n:'Huevos',p:.1},{n:'Azucar',p:.06},{n:'Manteca',p:.06},{n:'Papa pisada',p:.25},{n:'Leche en Polvo',p:.05},{n:'Sal',p:.02}]},
+  {n:'Tabun',i:[{n:'000',p:1},{n:'Agua',p:.62},{n:'Levadura',p:.005},{n:'Oliva',p:.02},{n:'Sal',p:.02}]},
+  {n:'Tapa Tarta Oliva',i:[{n:'0000',p:1},{n:'Agua',p:.5},{n:'Oliva',p:.2},{n:'Sal',p:.02}]},
+  {n:'Trenza PFB',i:[{n:'000',p:1},{n:'Agua',p:.56},{n:'Levadura',p:.04},{n:'Azucar',p:.05},{n:'Manteca',p:.05},{n:'Leche en Polvo',p:.1},{n:'Miel',p:.03},{n:'Sal',p:.02}]},
+  // CAMBIO 3: Pizza New York → Pizza NY Style (porcentajes sin cambio del HTML)
+  {n:'Pizza NY Style',i:[{n:'000',p:1},{n:'Agua',p:.65},{n:'Levadura',p:.01},{n:'Oliva',p:.02},{n:'Sal',p:.02}]},
+  {n:'Chipa',i:[{n:'Mandioca',p:1},{n:'Leche fluida',p:.4},{n:'Huevos',p:.2},{n:'Manteca',p:.2},{n:'Polvo Hornear',p:.02},{n:'Queso semiduro',p:.6},{n:'Queso duro',p:.4},{n:'Sal',p:.01}]},
+  {n:'Pan Integral Básico',i:[{n:'Harina integral',p:.8},{n:'000',p:.2},{n:'Agua',p:.6},{n:'Levadura',p:.03},{n:'Miel',p:.04},{n:'Oliva',p:.05},{n:'Sal',p:.02}]},
+  {n:'Pancakes CS',i:[{n:'0000',p:1},{n:'Azucar',p:.21},{n:'Polvo Hornear',p:.04},{n:'Bicarbonato',p:.03},{n:'Sal',p:.01},{n:'Leche fluida',p:1.5},{n:'Huevos',p:.42},{n:'Manteca',p:.23}]},
+  {n:'Scons de Queso (sin huevo)',i:[{n:'0000',p:1},{n:'Leche fluida',p:.5},{n:'Manteca',p:.2},{n:'Polvo Hornear',p:.05},{n:'Queso duro',p:.5},{n:'Sal',p:.01}]},
+].map(r => ({ nombre: r.n, custom: false, ingredientes: r.i.map(x => ({ nombre: x.n, pct: x.p })) }));
+
+// ── ESTADO ───────────────────────────────────────────────────────────────────
+let recetasCustom = [];
+try { const s = localStorage.getItem('pfb_custom'); if (s) recetasCustom = JSON.parse(s); } catch(e){}
+
+const NOTAS_BASE = {
+  'pfb_nota_Baciatta': '1 < Cm < 1,5\nPFB=1,25',
+  'pfb_nota_Bagels con huevo': '120 < U < 160\nPFB=135 Grs.',
+  'pfb_nota_Bagels old School': '120 < U < 160\nPFB=135 Grs.',
+  'pfb_nota_Bao': '80 < U < 120\nPFB=90 Grs.',
+  'pfb_nota_Brioche para sandwich': '110 < U < 150\nPFB=135 Grs.',
+  'pfb_nota_Cremona': '300 < U < 600\nPFB=400 Grs.',
+  'pfb_nota_Criollitos': '30 < U < 60\nPFB=5x5 cm y 40 Grs.',
+  'pfb_nota_Croissants': '70 < U < 110\nPFB=90 Grs.\n△=10x30 cm.',
+  'pfb_nota_English Muffin': 'U=57 Grs. (2 Oz)',
+  'pfb_nota_Falsa Ciabatta': '120 < U < 180\nPFB=150 Grs.',
+  'pfb_nota_Falsa Piadina': '120 < U < 160\nPFB=140 Grs.',
+  'pfb_nota_Fatay': '50 < U < 110\nPFB=85 Grs.',
+  'pfb_nota_Figazitas de manteca': '30 < U < 50\nPFB=40 Grs.\nCortante= 8 cm.',
+  'pfb_nota_Focaccia (Biga)': '1 < Cm < 2\nPFB=1,6\nSandwich=1,4',
+  'pfb_nota_Focaccia 80': '1 < Cm < 2\nPFB=1,6\nSandwich=1,4',
+  'pfb_nota_Focaccia con Masa Madre': '1 < Cm < 2\nPFB=1,6\nSandwich=1,4',
+  'pfb_nota_Jalah': '150 < U < 300\nPFB=250 Grs.',
+  'pfb_nota_Kachapuri': '200 < U < 300\nPFB=250 Grs.',
+  'pfb_nota_Kaiser Philly': '200 < U < 250\nPFB=225 Grs.',
+  'pfb_nota_Kaiser Philly (leche en polvo)': '200 < U < 250\nPFB=225 Grs.',
+  // CAMBIO 2b: nota renombrada
+  'pfb_nota_Medialunas de Grasa (Laminado)': '40 < U < 80\nPFB=60 Grs.\n△=12x12 cm.',
+  'pfb_nota_Medialunas de Manteca': '50 < U < 80\nPFB=70 Grs.\n△=10x15 cm.',
+  'pfb_nota_Miñon': '30 < U < 60\nPFB=50 Grs.',
+  'pfb_nota_Molde St. John (poolish)': 'Qm=LxLxL/2,75',
+  'pfb_nota_Mollete': '120 < U < 180\nPFB=140 Grs.',
+  'pfb_nota_Pan de Hamburguesa de papa': '120 < U < 160\nPFB=135 Grs.',
+  'pfb_nota_Pan de Hokkaido': 'Qm=LxLxL/3',
+  'pfb_nota_Pan de Manteca': '150 < U < 300\nPFB=250 Grs.',
+  'pfb_nota_Pan de Miga': 'Qm=LxLxL/2,8',
+  'pfb_nota_Pan de Molde Clasico': 'Qm=LxLxL/3',
+  'pfb_nota_Pan de Pancho #1 (Leche)': '75 < U < 115\nPFB=105 Grs. (18cm)',
+  'pfb_nota_Pan de Pancho #2 (Clasico)': '75 < U < 115\nPFB=105 Grs. (18cm)',
+  'pfb_nota_Pan de Pancho #3 (Huevo)': '75 < U < 115\nPFB=105 Grs. (18cm)',
+  'pfb_nota_Pan Ingles': 'Qm=LxLxL/3',
+  'pfb_nota_Pan Pita': '50 < U < 120\nPFB=80 Grs. (15 Cm)',
+  'pfb_nota_PBT Leche': '110 < U < 160\nPFB=140 Grs.',
+  'pfb_nota_PBT Leche en polvo': '110 < U < 160\nPFB=140 Grs.',
+  'pfb_nota_Philly Stteak Bread': '200 < U < 250\nPFB=225 Grs.',
+  'pfb_nota_Pita con Poolish': '50 < U < 120\nPFB=80 Grs. (15 Cm)',
+  'pfb_nota_Pizza Chicago': 'Base=0,60 < Cm < 1,00\nTapa = B/2\nPFB=Cm=0,80',
+  'pfb_nota_Pizza in Teglia': '0,5 < Cm < 1\nPFB=0,70',
+  'pfb_nota_Pizza Molde': '0,5 < Cm < 1\nPFB=0,75',
+  'pfb_nota_Pizza Napoletana': '240 < Qm < 300\nPFB=280 Grs.',
+  // CAMBIO 3b: nota renombrada
+  'pfb_nota_Pizza NY Style': '0,4 < Cm < 0,6\nPFB=0,45',
+  'pfb_nota_Pizza Sfogliatta': '0,7 < Cm < 1,2\nPFB=1,00',
+  'pfb_nota_Pizza Soft': '0,5 < Cm < 1,2\nPFB=0,85',
+  'pfb_nota_Pletsalej': '75 < U < 115\nPFB=95 Grs.',
+  'pfb_nota_Rosetta': '80 < U < 110\nPFB=90 Grs. (Rosetera 6 cm)',
+  'pfb_nota_Sacramento': '120 < U < 160\nPFB=135 Grs.\n△=12x20 cm.',
+  'pfb_nota_Sliders de papa': '30 < U < 60\nPFB=50 Grs.',
+  'pfb_nota_Tabun': '50 < U < 100\nPFB=75 Grs.',
+  'pfb_nota_Tapa Tarta Oliva': 'Cm=0,9 (contando bordes)',
+  'pfb_nota_Trenza PFB': '150 < U < 300\nPFB=250 Grs.',
+  'pfb_nota_Scons de Queso (sin huevo)': 'Qm= LxLx2',
+  'pfb_nota_Pan Integral Básico': '40 < U < 90 Grs.\nPFB=75 Grs.\nTi ≥ 95°',
+  'pfb_nota_Pancakes CS': '90 < U < 110 Grs.\nPFB=105 Grs.',
+};
+
+const _notasCache = {};
+Object.assign(_notasCache, NOTAS_BASE);
+try {
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('pfb_nota_')) {
+      _notasCache[key] = localStorage.getItem(key);
+    }
+  }
+} catch(e) {}
+
+function todas() {
+  const customNames = new Set(recetasCustom.map(r => r.nombre));
+  const base = RECETAS_BASE.filter(r => !customNames.has(r.nombre));
+  return [...base, ...recetasCustom].sort((a,b) => a.nombre.localeCompare(b.nombre));
+}
+function guardarCustom() {
+  try { localStorage.setItem('pfb_custom', JSON.stringify(recetasCustom)); } catch(e){}
+}
+
+// ── SELECT ───────────────────────────────────────────────────────────────────
+function populateSelect(mantener) {
+  const sel = document.getElementById('recetaSelect');
+  sel.innerHTML = '<option value="">— Seleccioná una receta —</option>';
+  todas().forEach(r => {
+    const o = document.createElement('option');
+    o.value = r.nombre;
+    o.textContent = r.nombre;
+    sel.appendChild(o);
+  });
+  if (mantener) sel.value = mantener;
+}
+
+function onSelectReceta() {
+  const nombre = document.getElementById('recetaSelect').value;
+  document.getElementById('resultado').style.display = 'none';
+  if (!nombre) { document.getElementById('recetaPreview').style.display = 'none'; return; }
+
+  const r = todas().find(x => x.nombre === nombre);
+  if (!r) return;
+
+  document.getElementById('previewNombre').innerHTML =
+    r.nombre;
+
+  const btnEdit = document.getElementById('btnEditReceta');
+  btnEdit.style.display = 'inline-block';
+
+  const grid = document.getElementById('previewGrid');
+  grid.innerHTML = '';
+  r.ingredientes.forEach(ing => {
+    const div = document.createElement('div');
+    div.className = 'preview-ing';
+    div.innerHTML = `<span class="pi-name">${ing.nombre}</span><span class="pi-pct">${(ing.pct*100).toFixed(1)}%</span>`;
+    grid.appendChild(div);
+  });
+  document.getElementById('recetaPreview').style.display = 'block';
+  renderNota(nombre);
+}
+
+// ── CALCULAR ─────────────────────────────────────────────────────────────────
+function hidColor(ratio) {
+  if (ratio < 0.60) return '#2ecc71';
+  if (ratio <= 0.80) return '#f1c40f';
+  return '#e74c3c';
+}
+function hidDot(ratio) {
+  return `<span class="hid-dot" style="background:${hidColor(ratio)}"></span>`;
+}
+
+function fmt(n) { return n===0?'—':n<10?n.toFixed(1):Math.round(n).toString(); }
+function fmtPct(n) { return (n*100).toFixed(1)+'%'; }
+
+function calcular() {
+  const nombre = document.getElementById('recetaSelect').value;
+  if (!nombre) { showToast('Primero elegí una receta'); return; }
+  const receta = todas().find(r => r.nombre === nombre);
+  if (!receta) return;
+
+  const cantPiezas = parseFloat(document.getElementById('cantPiezas').value) || 1;
+  let pesoPieza = parseFloat(document.getElementById('pesoPieza').value) || 100;
+  if (document.getElementById('pesoUnit').value === 'kg') pesoPieza *= 1000;
+
+  const merma = nombre === 'Medialunas de Manteca' ? 1.25 : nombre === 'Criollitos' ? 1.20 : 1.05;
+  const pesoCrudo = cantPiezas * pesoPieza * merma;
+
+  document.getElementById('masaPreview').textContent =
+    `Merma ${((merma-1)*100).toFixed(0)}% → masa cruda: ${Math.round(pesoCrudo)} g`;
+
+  const sumaTotalPct = receta.ingredientes.reduce((s,x) => s + x.pct, 0);
+  const harinaBase = pesoCrudo / sumaTotalPct;
+
+  const items = receta.ingredientes.map(ing => ({ ...ing, cant: harinaBase * ing.pct }));
+
+  const LEV_PCT = 0.01;
+  const PF_DIV   = { 'Poolish': 2.01, 'Biga': 1.51, 'Masa madre': 2 };
+  const PF_AGUA  = { 'Poolish': 1,    'Biga': 0.5,  'Masa madre': 1 };
+
+  const preferIngrs = receta.ingredientes.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
+  const pfDetalle = {};
+  preferIngrs.forEach(pf => {
+    const cantPf = harinaBase * pf.pct;
+    const pfH = cantPf / (PF_DIV[pf.nombre] ?? 2);
+    const pfA = pfH * (PF_AGUA[pf.nombre] ?? 1);
+    const pfL = pf.nombre === 'Masa madre' ? 0 : pfH * LEV_PCT;
+    pfDetalle[pf.nombre] = { total: cantPf, harina: pfH, agua: pfA, lev: pfL };
+  });
+
+  const harinaDirecta = items
+    .filter(x => HARINAS_TIPOS.includes(x.nombre))
+    .reduce((s,x) => s + x.cant, 0);
+  const harinaPf = preferIngrs.reduce((s,pf) => s + pfDetalle[pf.nombre].harina, 0);
+  const harinaTotal = harinaDirecta + harinaPf;
+
+  let hidTotal = 0;
+  items.forEach(({nombre, cant}) => {
+    if (PREFERMENTO_NAMES.includes(nombre)) {
+      hidTotal += pfDetalle[nombre].agua;
+    } else {
+      hidTotal += cant * (HUMEDAD[nombre] ?? 0);
+    }
+  });
+
+  const harinaItems = items.filter(x => HARINAS_TIPOS.includes(x.nombre) && x.cant > 0);
+  const preferItems = items.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
+  const otrosItems  = items.filter(x => !HARINAS_TIPOS.includes(x.nombre) && !PREFERMENTO_NAMES.includes(x.nombre) && x.cant > 0);
+
+  document.getElementById('resultado').style.display = 'block';
+  document.getElementById('resNombre').textContent = nombre;
+  const unidad = document.getElementById('pesoUnit').value;
+  document.getElementById('resPiezas').textContent = `${cantPiezas} × ${pesoPieza}${unidad}`;
+  document.getElementById('resMasa').textContent = `${Math.round(pesoCrudo)} g`;
+  document.getElementById('resHarina').textContent = `${Math.round(harinaTotal)} g`;
+
+  document.getElementById('totalsStrip').innerHTML = `
+    <div class="total-chip"><div class="tc-label">Masa cruda</div>
+      <div class="tc-val">${fmt(pesoCrudo)}<small style="font-size:.8rem;opacity:.7"> g</small></div></div>
+    <div class="total-chip total-chip-editable" onclick="editarHarina()" title="Tocar para editar">
+      <div class="tc-label">Harina total ✎</div>
+      <div class="tc-val" id="harinaChipVal">${fmt(harinaTotal)}<small style="font-size:.8rem;opacity:.7"> g</small></div>
+      <input class="harina-input" id="harinaInput" type="number" min="1" step="10"
+        value="${Math.round(harinaTotal)}" style="display:none"
+        onkeydown="if(event.key==='Enter')confirmarHarina()"
+        onblur="confirmarHarina()">
+    </div>
+    <div class="total-chip">
+      ${hidDot(hidTotal/harinaTotal)}
+      <div class="tc-label">Hidratación</div>
+      <div class="tc-val">${((hidTotal/harinaTotal)*100).toFixed(0)}<small style="font-size:.8rem;opacity:.7"> %</small></div>
+    </div>`;
+
+  const tbody = document.getElementById('ingBody');
+  tbody.innerHTML = '';
+  const addSec = l => { const tr=document.createElement('tr'); tr.className='section-row'; tr.innerHTML=`<td colspan="3">${l}</td>`; tbody.appendChild(tr); };
+  const addRow = it => { const tr=document.createElement('tr'); tr.innerHTML=`<td><span class="dot"></span><span class="ing-name">${it.nombre}</span></td><td><span class="ing-pct">${fmtPct(it.pct)}</span></td><td><span class="ing-qty">${fmt(it.cant)}</span><span class="ing-unit">g</span></td>`; tbody.appendChild(tr); };
+
+  if (harinaItems.length) { addSec('Harinas'); harinaItems.forEach(addRow); }
+  if (otrosItems.length)  { addSec('Ingredientes'); otrosItems.forEach(addRow); }
+  if (preferItems.length) { addSec('Prefermentos'); preferItems.forEach(addRow); }
+
+  const pfBox = document.getElementById('prefermentoBox');
+  if (preferItems.length) {
+    const titulos = { 'Poolish':'Poolish (100% hidratación)', 'Biga':'Biga (50% hidratación)', 'Masa madre':'Masa madre (100% hidratación)' };
+    const pfCards = preferItems.map(pf => {
+      const d = pfDetalle[pf.nombre];
+      const levRow = d.lev > 0
+        ? `<div class="pf-item"><span class="pf-n">Levadura (1%)</span><span class="pf-v">${fmt(d.lev)} g</span></div>` : '';
+      return `<div class="prefermento-box" style="margin-top:12px">
+        <div class="pb-title">▸ Detalle ${titulos[pf.nombre] || pf.nombre}</div>
+        <div class="prefermento-grid">
+          <div class="pf-item"><span class="pf-n">Harina</span><span class="pf-v">${fmt(d.harina)} g</span></div>
+          <div class="pf-item"><span class="pf-n">Agua</span><span class="pf-v">${fmt(d.agua)} g</span></div>
+          ${levRow}
+          <div class="pf-item"><span class="pf-n">Total</span><span class="pf-v">${fmt(d.total)} g</span></div>
+        </div></div>`;
+    }).join('');
+    pfBox.innerHTML = pfCards;
+  } else { pfBox.innerHTML = ''; }
+
+  const tzItem = items.find(x => x.nombre === 'Thang Zhong');
+  let tzBox = document.getElementById('thangZhongBox');
+  if (!tzBox) {
+    tzBox = document.createElement('div');
+    tzBox.id = 'thangZhongBox';
+    document.getElementById('prefermentoBox').parentNode.appendChild(tzBox);
+  }
+  if (tzItem && tzItem.cant > 0) {
+    const tzTotal = tzItem.cant;
+    const tzHarina = tzTotal / 6;
+    const tzAgua   = tzTotal * 5 / 6;
+    tzBox.innerHTML = `<div class="prefermento-box" style="margin-top:12px">
+      <div class="pb-title">▸ Detalle Thang Zhong (1 harina : 5 agua)</div>
+      <div class="prefermento-grid">
+        <div class="pf-item"><span class="pf-n">Harina</span><span class="pf-v">${fmt(tzHarina)} g</span></div>
+        <div class="pf-item"><span class="pf-n">Agua</span><span class="pf-v">${fmt(tzAgua)} g</span></div>
+        <div class="pf-item"><span class="pf-n">Total</span><span class="pf-v">${fmt(tzTotal)} g</span></div>
+      </div></div>`;
+  } else {
+    tzBox.innerHTML = '';
+  }
+
+  document.getElementById('resultado').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ── MODAL ────────────────────────────────────────────────────────────────────
+function abrirModal(receta) {
+  document.getElementById('harinasRows').innerHTML = '';
+  document.getElementById('ingRows').innerHTML = '';
+  document.getElementById('nuevaNombre').value = '';
+  document.getElementById('editandoNombre').value = '';
+  document.getElementById('btnEliminar').style.display = 'none';
+  document.getElementById('modalTitle').textContent = receta ? 'Editar receta' : 'Nueva receta';
+
+  if (receta) {
+    document.getElementById('nuevaNombre').value = receta.nombre;
+    document.getElementById('editandoNombre').value = receta.nombre;
+    document.getElementById('btnEliminar').style.display = 'inline-block';
+
+    const harinas = receta.ingredientes.filter(x => HARINAS_TIPOS.includes(x.nombre));
+    const otros   = receta.ingredientes.filter(x => !HARINAS_TIPOS.includes(x.nombre));
+    if (harinas.length) harinas.forEach(x => addHarinaRow(x.nombre, +(x.pct*100).toFixed(2)));
+    else addHarinaRow();
+    if (otros.length) otros.forEach(x => addIngRow(x.nombre, +(x.pct*100).toFixed(2)));
+    else addIngRow();
+  } else {
+    addHarinaRow(); addIngRow();
+  }
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function cerrarModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function onOverlayClick(e) { if (e.target===document.getElementById('modalOverlay')) cerrarModal(); }
+
+function editarRecetaActual() {
+  const nombre = document.getElementById('recetaSelect').value;
+  const r = recetasCustom.find(x => x.nombre === nombre)
+         || RECETAS_BASE.find(x => x.nombre === nombre);
+  if (r) abrirModal(r);
+}
+
+// ── MOVER FILAS ──────────────────────────────────────────────────────────────
+function moverFila(btn, dir) {
+  const row = btn.closest('.ing-row');
+  const parent = row.parentNode;
+  if (dir === -1) {
+    const prev = row.previousElementSibling;
+    if (prev) parent.insertBefore(row, prev);
+  } else {
+    const next = row.nextElementSibling;
+    if (next) parent.insertBefore(next, row);
+  }
+}
+
+function makeRow(placeholder, nombre, pct, listId) {
+  const row = document.createElement('div');
+  row.className = 'ing-row';
+  row.innerHTML = `
+    <div class="move-col">
+      <button class="btn-move" onclick="moverFila(this,-1)" title="Subir">▲</button>
+      <button class="btn-move" onclick="moverFila(this,1)" title="Bajar">▼</button>
+    </div>
+    <input type="text" placeholder="${placeholder}" value="${nombre}" list="${listId}">
+    <input type="number" class="pct-input" placeholder="0" min="0" step="0.1" value="${pct}">
+    <button class="btn-remove-ing" onclick="this.closest('.ing-row').remove()">✕</button>`;
+  return row;
+}
+
+function addHarinaRow(nombre='', pct='') {
+  const row = makeRow('Ej: 000, 0000…', nombre, pct, 'harinaSuggestions');
+  document.getElementById('harinasRows').appendChild(row);
+}
+
+function addIngRow(nombre='', pct='') {
+  const row = makeRow('Ej: Agua, Levadura…', nombre, pct, 'ingSuggestions');
+  document.getElementById('ingRows').appendChild(row);
+}
+
+function recolectarIngredientes() {
+  const ings = [];
+  document.querySelectorAll('#harinasRows .ing-row').forEach(row => {
+    const [iN, iP] = row.querySelectorAll('input');
+    const n=iN.value.trim(), p=parseFloat(iP.value);
+    if (n && !isNaN(p) && p>0) ings.push({ nombre:n, pct:p/100 });
+  });
+  document.querySelectorAll('#ingRows .ing-row').forEach(row => {
+    const [iN, iP] = row.querySelectorAll('input');
+    const n=iN.value.trim(), p=parseFloat(iP.value);
+    if (n && !isNaN(p) && p>0) ings.push({ nombre:n, pct:p/100 });
+  });
+  return ings;
+}
+
+function guardarReceta() {
+  const nombre = document.getElementById('nuevaNombre').value.trim();
+  const editando = document.getElementById('editandoNombre').value;
+  if (!nombre) { showToast('Ponele un nombre a la receta'); return; }
+
+  const ings = recolectarIngredientes();
+  if (!ings.length) { showToast('Agregá al menos un ingrediente'); return; }
+
+  if (editando) {
+    const idx = recetasCustom.findIndex(x => x.nombre === editando);
+    if (idx >= 0) {
+      recetasCustom[idx] = { nombre, custom:true, ingredientes:ings };
+    } else {
+      recetasCustom.push({ nombre, custom:true, ingredientes:ings });
+    }
+    guardarCustom();
+    populateSelect(nombre);
+    document.getElementById('recetaSelect').value = nombre;
+    onSelectReceta();
+    cerrarModal();
+    showToast(`✓ "${nombre}" actualizada`);
+  } else {
+    if (todas().find(r => r.nombre === nombre)) { showToast('Ya existe una receta con ese nombre'); return; }
+    recetasCustom.push({ nombre, custom:true, ingredientes:ings });
+    guardarCustom();
+    populateSelect(nombre);
+    document.getElementById('recetaSelect').value = nombre;
+    onSelectReceta();
+    cerrarModal();
+    showToast(`✓ "${nombre}" guardada`);
+  }
+}
+
+function eliminarReceta() {
+  const editando = document.getElementById('editandoNombre').value;
+  if (!editando) return;
+  if (!confirm(`¿Eliminar "${editando}"? Esta acción no se puede deshacer.`)) return;
+  recetasCustom = recetasCustom.filter(x => x.nombre !== editando);
+  guardarCustom();
+  const esBase = RECETAS_BASE.some(r => r.nombre === editando);
+  populateSelect(esBase ? editando : '');
+  if (!esBase) {
+    document.getElementById('recetaPreview').style.display = 'none';
+    document.getElementById('resultado').style.display = 'none';
+  } else {
+    document.getElementById('recetaSelect').value = editando;
+    onSelectReceta();
+  }
+  cerrarModal();
+  showToast(esBase ? `"${editando}" restaurada al original` : `"${editando}" eliminada`);
+}
+
+// ── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── EDITAR HARINA DIRECTAMENTE ───────────────────────────────────────────────
+function editarHarina() {
+  const chip = document.getElementById('harinaChipVal');
+  const input = document.getElementById('harinaInput');
+  if (!chip || !input) return;
+  chip.style.display = 'none';
+  input.style.display = 'block';
+  input.focus();
+  input.select();
+}
+
+function confirmarHarina() {
+  const chip = document.getElementById('harinaChipVal');
+  const input = document.getElementById('harinaInput');
+  if (!chip || !input || input.style.display === 'none') return;
+
+  const nuevaHarina = parseFloat(input.value);
+  if (!nuevaHarina || nuevaHarina <= 0) {
+    chip.style.display = 'block';
+    input.style.display = 'none';
+    return;
+  }
+
+  chip.style.display = 'block';
+  input.style.display = 'none';
+
+  const nombre = document.getElementById('recetaSelect').value;
+  const receta = todas().find(r => r.nombre === nombre);
+  if (!receta) return;
+
+  recalcularDesdeHarina(receta, nuevaHarina);
+}
+
+function recalcularDesdeHarina(receta, harinaTotal) {
+  const PF_DIV = { 'Poolish': 2.01, 'Biga': 1.51, 'Masa madre': 2 };
+  const PF_AGUA = { 'Poolish': 1, 'Biga': 0.5, 'Masa madre': 1 };
+  const LEV_PCT = 0.01;
+
+  const harinasPct = receta.ingredientes
+    .filter(x => HARINAS_TIPOS.includes(x.nombre))
+    .reduce((s,x) => s + x.pct, 0);
+  const pfHarinaFactor = receta.ingredientes
+    .filter(x => PREFERMENTO_NAMES.includes(x.nombre))
+    .reduce((s,x) => s + x.pct / (PF_DIV[x.nombre] ?? 2), 0);
+
+  const harinaBase = harinaTotal / (harinasPct + pfHarinaFactor);
+
+  const sumaTotalPct = receta.ingredientes.reduce((s,x) => s + x.pct, 0);
+  const pesoCrudo = harinaBase * sumaTotalPct;
+
+  const items = receta.ingredientes.map(ing => ({ ...ing, cant: harinaBase * ing.pct }));
+
+  const preferIngrs = receta.ingredientes.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
+  const pfDetalle = {};
+  preferIngrs.forEach(pf => {
+    const cantPf = harinaBase * pf.pct;
+    const pfH = cantPf / (PF_DIV[pf.nombre] ?? 2);
+    const pfA = pfH * (PF_AGUA[pf.nombre] ?? 1);
+    const pfL = pf.nombre === 'Masa madre' ? 0 : pfH * LEV_PCT;
+    pfDetalle[pf.nombre] = { total: cantPf, harina: pfH, agua: pfA, lev: pfL };
+  });
+
+  let hidTotal = 0;
+  items.forEach(({nombre, cant}) => {
+    if (PREFERMENTO_NAMES.includes(nombre)) {
+      hidTotal += pfDetalle[nombre]?.agua ?? 0;
+    } else {
+      hidTotal += cant * (HUMEDAD[nombre] ?? 0);
+    }
+  });
+
+  document.getElementById('harinaChipVal').innerHTML =
+    `${fmt(harinaTotal)}<small style="font-size:.8rem;opacity:.7"> g</small>`;
+  document.getElementById('harinaInput').value = Math.round(harinaTotal);
+
+  const masaChip = document.querySelector('.totals-strip .total-chip:first-child .tc-val');
+  if (masaChip) masaChip.innerHTML =
+    `${fmt(pesoCrudo)}<small style="font-size:.8rem;opacity:.7"> g</small>`;
+
+  const hidChip = document.querySelector('.totals-strip .total-chip:last-child .tc-val');
+  if (hidChip) {
+    const hidRatio = hidTotal / harinaTotal;
+    hidChip.innerHTML =
+      `${(hidRatio*100).toFixed(0)}<small style="font-size:.8rem;opacity:.7"> %</small>`;
+    const dot = hidChip.closest('.total-chip').querySelector('.hid-dot');
+    if (dot) dot.style.background = hidColor(hidRatio);
+  }
+
+  document.getElementById('resMasa').textContent = `${Math.round(pesoCrudo)} g`;
+  document.getElementById('resHarina').textContent = `${Math.round(harinaTotal)} g`;
+
+  const harinaItems = items.filter(x => HARINAS_TIPOS.includes(x.nombre) && x.cant > 0);
+  const preferItems = items.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
+  const otrosItems  = items.filter(x => !HARINAS_TIPOS.includes(x.nombre) && !PREFERMENTO_NAMES.includes(x.nombre) && x.cant > 0);
+
+  const tbody = document.getElementById('ingBody');
+  tbody.innerHTML = '';
+  const addSec = l => { const tr=document.createElement('tr'); tr.className='section-row'; tr.innerHTML=`<td colspan="3">${l}</td>`; tbody.appendChild(tr); };
+  const addRow = it => { const tr=document.createElement('tr'); tr.innerHTML=`<td><span class="dot"></span><span class="ing-name">${it.nombre}</span></td><td><span class="ing-pct">${fmtPct(it.pct)}</span></td><td><span class="ing-qty">${fmt(it.cant)}</span><span class="ing-unit">g</span></td>`; tbody.appendChild(tr); };
+  if (harinaItems.length) { addSec('Harinas'); harinaItems.forEach(addRow); }
+  if (otrosItems.length)  { addSec('Ingredientes'); otrosItems.forEach(addRow); }
+  if (preferItems.length) { addSec('Prefermentos'); preferItems.forEach(addRow); }
+
+  const pfBox = document.getElementById('prefermentoBox');
+  if (preferItems.length) {
+    const titulos = { 'Poolish':'Poolish (100% hidratación)', 'Biga':'Biga (50% hidratación)', 'Masa madre':'Masa madre (100% hidratación)' };
+    pfBox.innerHTML = preferItems.map(pf => {
+      const d = pfDetalle[pf.nombre];
+      const levRow = d.lev > 0 ? `<div class="pf-item"><span class="pf-n">Levadura (1%)</span><span class="pf-v">${fmt(d.lev)} g</span></div>` : '';
+      return `<div class="prefermento-box" style="margin-top:12px"><div class="pb-title">▸ Detalle ${titulos[pf.nombre]||pf.nombre}</div>
+        <div class="prefermento-grid">
+          <div class="pf-item"><span class="pf-n">Harina</span><span class="pf-v">${fmt(d.harina)} g</span></div>
+          <div class="pf-item"><span class="pf-n">Agua</span><span class="pf-v">${fmt(d.agua)} g</span></div>
+          ${levRow}
+          <div class="pf-item"><span class="pf-n">Total</span><span class="pf-v">${fmt(d.total)} g</span></div>
+        </div></div>`;
+    }).join('');
+  } else { pfBox.innerHTML = ''; }
+
+  const tzItem2 = items.find(x => x.nombre === 'Thang Zhong');
+  let tzBox2 = document.getElementById('thangZhongBox');
+  if (!tzBox2) {
+    tzBox2 = document.createElement('div');
+    tzBox2.id = 'thangZhongBox';
+    document.getElementById('prefermentoBox').parentNode.appendChild(tzBox2);
+  }
+  if (tzItem2 && tzItem2.cant > 0) {
+    const tzTotal2 = tzItem2.cant;
+    tzBox2.innerHTML = `<div class="prefermento-box" style="margin-top:12px">
+      <div class="pb-title">▸ Detalle Thang Zhong (1 harina : 5 agua)</div>
+      <div class="prefermento-grid">
+        <div class="pf-item"><span class="pf-n">Harina</span><span class="pf-v">${fmt(tzTotal2/6)} g</span></div>
+        <div class="pf-item"><span class="pf-n">Agua</span><span class="pf-v">${fmt(tzTotal2*5/6)} g</span></div>
+        <div class="pf-item"><span class="pf-n">Total</span><span class="pf-v">${fmt(tzTotal2)} g</span></div>
+      </div></div>`;
+  } else if (tzBox2) { tzBox2.innerHTML = ''; }
+}
+
+// ── NOTAS ────────────────────────────────────────────────────────────────────
+function getNota(nombre) {
+  return _notasCache['pfb_nota_' + nombre] || '';
+}
+function setNota(nombre, texto) {
+  const key = 'pfb_nota_' + nombre;
+  _notasCache[key] = texto;
+  try { localStorage.setItem(key, texto); } catch(e){}
+}
+
+function renderNota(nombre) {
+  const nota = getNota(nombre);
+  const display = document.getElementById('notasDisplay');
+  const editWrap = document.getElementById('notasEditWrap');
+  if (nota) {
+    const div = document.createElement('div');
+    div.className = 'notes-saved';
+    div.title = 'Tocar para editar';
+    div.onclick = editarNota;
+    div.textContent = nota;
+    display.innerHTML = '';
+    display.appendChild(div);
+    editWrap.style.display = 'none';
+  } else {
+    display.innerHTML = `<span class="notes-empty" style="cursor:pointer" onclick="editarNota()">+ Agregar nota</span>`;
+    editWrap.style.display = 'none';
+  }
+}
+
+function editarNota() {
+  const nombre = document.getElementById('recetaSelect').value;
+  const ta = document.getElementById('notasInput');
+  ta.value = getNota(nombre);
+  updateCharCount();
+  document.getElementById('notasDisplay').innerHTML = '';
+  document.getElementById('notasEditWrap').style.display = 'flex';
+  ta.focus();
+}
+
+function updateCharCount() {
+  const ta = document.getElementById('notasInput');
+  const lines = ta.value.split('\n');
+  if (lines.length > 3) {
+    ta.value = lines.slice(0, 3).join('\n');
+  }
+  const fixed = ta.value.split('\n').map(l => l.slice(0, 75)).join('\n');
+  if (fixed !== ta.value) ta.value = fixed;
+
+  const total = ta.value.length;
+  const remaining = 225 - total;
+  const charEl = document.getElementById('notasChar');
+  charEl.textContent = remaining + ' caracteres restantes';
+  charEl.className = 'notes-char' + (remaining < 20 ? ' over' : '');
+}
+
+function guardarNota() {
+  const nombre = document.getElementById('recetaSelect').value;
+  if (!nombre) return;
+  const texto = document.getElementById('notasInput').value.trim();
+  setNota(nombre, texto);
+  renderNota(nombre);
+}
+
+populateSelect();
+</script>
+
+
+<script id="pfb-cloud-sync">
+/*
+  PFB cloud sync V3.2
+  - No login/password.
+  - Supabase is the shared source of truth.
+  - LocalStorage is retained as an offline cache.
+  - The first sync never overwrites local custom recipes with an empty cloud state.
+*/
+window.PFB_CLOUD = {
+  url: localStorage.getItem('pfb_supabase_url') || '',
+  key: localStorage.getItem('pfb_supabase_key') || '',
+  row: '00000000-0000-0000-0000-000000000001',
+  _saveQueue: Promise.resolve(),
+  async save(){
+    const self=this;
+    self._saveQueue = self._saveQueue.then(async ()=>{
+      if(!self.url || !self.key) return false;
+
+      /* IMPORTANT: recetasCustom/_notasCache are lexical variables in the
+         original PFB script, so read them directly rather than window.*. */
+      const custom = Array.isArray(recetasCustom) ? recetasCustom : [];
+      const notas = (typeof _notasCache === 'object' && _notasCache) ? _notasCache : {};
+
+      const payload = {
+        id:self.row,
+        nombre:'PFB',
+        datos:{recetasCustom:custom, notas:notas},
+        actualizado_en:new Date().toISOString()
+      };
+
+      try{
+        const r=await fetch(self.url.replace(/\/+$/,'') + '/rest/v1/recetas?on_conflict=id',{
+          method:'POST',
+          headers:{
+            'apikey':self.key,
+            'Authorization':'Bearer '+self.key,
+            'Content-Type':'application/json',
+            'Prefer':'resolution=merge-duplicates,return=minimal'
+          },
+          body:JSON.stringify(payload)
+        });
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        localStorage.setItem('pfb_cloud_last_ok',Date.now().toString());
+        return true;
+      }catch(e){
+        console.warn('PFB sync save:',e);
+        return false;
+      }
+    });
+    return self._saveQueue;
+  },
+  async load(){
+    if(!this.url || !this.key) return null;
+    try{
+      const r=await fetch(this.url.replace(/\/+$/,'') + '/rest/v1/recetas?select=datos,actualizado_en&id=eq.'+this.row,{
+        headers:{'apikey':this.key,'Authorization':'Bearer '+this.key}
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const rows=await r.json();
+      return rows.length ? rows[0] : null;
+    }catch(e){
+      console.warn('PFB sync load:',e);
+      return null;
+    }
+  },
+  configure(url,key){
+    this.url=(url||'').trim().replace(/\/+$/,'');
+    this.key=(key||'').trim();
+    localStorage.setItem('pfb_supabase_url',this.url);
+    localStorage.setItem('pfb_supabase_key',this.key);
+  }
+};
+
+window.PFB_CLOUD_SYNC = async function(){ return await window.PFB_CLOUD.save(); };
+
+function pfbOpenSyncSetup(){
+  const currentUrl=localStorage.getItem('pfb_supabase_url')||'';
+  const currentKey=localStorage.getItem('pfb_supabase_key')||'';
+  const url=prompt('PFB — API URL de Supabase',currentUrl);
+  if(url===null)return;
+  const key=prompt('PFB — Publishable key de Supabase',currentKey);
+  if(key===null)return;
+  PFB_CLOUD.configure(url,key);
+  showToast('✓ Sincronización configurada');
+  PFB_CLOUD.save();
+}
+
+async function pfbSyncInit(){
+  if(!PFB_CLOUD.url || !PFB_CLOUD.key) return;
+
+  const localCustom = Array.isArray(recetasCustom) ? [...recetasCustom] : [];
+  const remote = await PFB_CLOUD.load();
+
+  /* If there is no usable remote row, publish the current local state. */
+  if(!remote || !remote.datos){
+    await PFB_CLOUD.save();
+    return;
+  }
+
+  const d=remote.datos || {};
+  const remoteCustom=Array.isArray(d.recetasCustom) ? d.recetasCustom : [];
+
+  /* First-sync safety:
+     never replace existing local recipes with an empty cloud array. */
+  if(remoteCustom.length===0 && localCustom.length>0){
+    await PFB_CLOUD.save();
+    return;
+  }
+
+  /* Otherwise the cloud copy is the shared state. */
+  recetasCustom.length=0;
+  remoteCustom.forEach(x=>recetasCustom.push(x));
+  try{localStorage.setItem('pfb_custom',JSON.stringify(recetasCustom));}catch(e){}
+
+  if(d.notas && typeof d.notas==='object'){
+    Object.assign(_notasCache,d.notas);
+    Object.keys(d.notas).forEach(k=>{
+      try{localStorage.setItem(k,d.notas[k]);}catch(e){}
+    });
+  }
+
+  populateSelect(document.getElementById('recetaSelect')?.value||'');
+  const n=document.getElementById('recetaSelect')?.value;
+  if(n && typeof onSelectReceta==='function') onSelectReceta();
+  showToast('✓ Recetas sincronizadas');
+}
+
+/* Local-first save + cloud sync. */
+window.guardarCustom = function(){
+  try{localStorage.setItem('pfb_custom',JSON.stringify(recetasCustom));}catch(e){}
+  PFB_CLOUD.save();
+};
+
+window.setNota = function(nombre,texto){
+  const key='pfb_nota_'+nombre;
+  _notasCache[key]=texto;
+  try{localStorage.setItem(key,texto);}catch(e){}
+  PFB_CLOUD.save();
+};
+
+window.pfbConfigurarSincronizacion = pfbOpenSyncSetup;
+
+window.addEventListener('load',()=>{
+  setTimeout(()=>pfbSyncInit(),150);
+});
+</script>
+
+</body>
+</html>

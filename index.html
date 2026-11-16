@@ -594,7 +594,7 @@ function calcular() {
   let pesoPieza = parseFloat(document.getElementById('pesoPieza').value) || 100;
   if (document.getElementById('pesoUnit').value === 'kg') pesoPieza *= 1000;
 
-  const merma = nombre === 'Medialunas de Manteca' ? 1.25 : nombre === 'Criollitos' ? 1.20 : 1.05;
+  const merma = ['Medialunas de Manteca', 'Medialunas de Manteca II', 'Croissants'].includes(nombre) ? 1.25 : nombre === 'Criollitos' ? 1.20 : 1.05;
   const pesoCrudo = cantPiezas * pesoPieza * merma;
 
   document.getElementById('masaPreview').textContent =

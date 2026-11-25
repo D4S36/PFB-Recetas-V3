@@ -331,6 +331,7 @@ header{
 
     <div class="ing-form-section">
       <div class="ing-form-title">Ingredientes</div>
+      <div style="font-size:.72rem;color:var(--muted);margin:-2px 0 10px">En Poolish, Biga y masa madre, el porcentaje indica qué parte de la harina total va al prefermento. Poolish y masa madre: máximo 50%.</div>
       <div class="ing-row-header">
         <span></span><span>Ingrediente</span><span style="text-align:right">% sobre harina</span><span></span>
       </div>
@@ -408,7 +409,7 @@ const RECETAS_BASE = [
   {n:'Medialunas de Grasa (Laminado)',i:[{n:'000',p:.3},{n:'0000',p:.7},{n:'Agua',p:.55},{n:'Levadura',p:.01},{n:'Sal',p:.03},{n:'Margarina empaste',p:.13},{n:'Grasa empaste',p:.13},{n:'Manteca empaste',p:.14},{n:'Harina empaste',p:.1}]},
   {n:'Medialunas de Manteca',i:[{n:'000',p:.2},{n:'0000',p:.8},{n:'Leche fluida',p:.38},{n:'Levadura',p:.03},{n:'Huevos',p:.2},{n:'Azucar',p:.1},{n:'Miel',p:.04},{n:'Esencia Vainilla',p:.005},{n:'Sal',p:.02},{n:'Manteca empaste',p:.4}]},
   {n:'Miñon',i:[{n:'000',p:1},{n:'Agua',p:.55},{n:'Levadura',p:.05},{n:'Extracto Malta',p:.01}]},
-  {n:'Molde St. John (poolish)',i:[{n:'000',p:1},{n:'Poolish',p:1},{n:'Agua',p:.313},{n:'Levadura',p:.02},{n:'Sal',p:.02}]},
+  {n:'Molde St. John (poolish)',i:[{n:'000',p:1},{n:'Poolish',p:.5},{n:'Agua',p:.55},{n:'Levadura',p:.02},{n:'Sal',p:.02}]},
   {n:'Mollete',i:[{n:'000',p:.75},{n:'0000',p:.25},{n:'Agua',p:.6},{n:'Levadura',p:.04},{n:'Oliva',p:.1},{n:'Sal',p:.02}]},
   {n:'Pan Blanco',i:[{n:'000',p:1},{n:'Agua',p:.65},{n:'Levadura',p:.05},{n:'Sal',p:.02}]},
   {n:'Pan de Hamburguesa de papa',i:[{n:'000',p:1},{n:'Agua',p:.4},{n:'Levadura',p:.03},{n:'Azucar',p:.1},{n:'Manteca',p:.1},{n:'Papa pisada',p:.2},{n:'Leche en Polvo',p:.1},{n:'Sal',p:.02}]},
@@ -584,6 +585,82 @@ function hidDot(ratio) {
 function fmt(n) { return n===0?'—':n<10?n.toFixed(1):Math.round(n).toString(); }
 function fmtPct(n) { return (n*100).toFixed(1)+'%'; }
 
+// Los porcentajes de prefermento representan la fracción de harina total
+// que se utiliza en ese prefermento; no representan su peso total.
+function modeloConPrefermentos(receta, harinaBase) {
+  const PF_HID = { 'Poolish': 1, 'Biga': 0.5, 'Masa madre': 1 };
+  const PF_LEV = { 'Poolish': 0.01, 'Biga': 0.01, 'Masa madre': 0 };
+  const harinas = receta.ingredientes.filter(x => HARINAS_TIPOS.includes(x.nombre));
+  const preferIngrs = receta.ingredientes.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
+  const harinaPct = harinas.reduce((s,x) => s + x.pct, 0);
+  if (!harinaPct) return { error: 'La receta debe tener al menos una harina.' };
+
+  for (const pf of preferIngrs) {
+    if ((pf.nombre === 'Poolish' || pf.nombre === 'Masa madre') && pf.pct > 0.5000001) {
+      return { error: `${pf.nombre}: no puede superar el 50% de la harina total.` };
+    }
+  }
+  const pfShareTotal = preferIngrs.reduce((s,x) => s + x.pct, 0);
+  if (pfShareTotal > 1.0000001) {
+    return { error: 'La suma de harina destinada a los prefermentos no puede superar el 100%.' };
+  }
+  if (preferIngrs.some((x,i) => preferIngrs.findIndex(y => y.nombre === x.nombre) !== i)) {
+    return { error: 'Cada prefermento debe aparecer una sola vez en la receta.' };
+  }
+
+  const harinaTotal = harinaBase * harinaPct;
+  const aguaItems = receta.ingredientes.filter(x => x.nombre === 'Agua');
+  const aguaPct = aguaItems.reduce((s,x) => s + x.pct, 0);
+  const otrosItemsReceta = receta.ingredientes.filter(x =>
+    !HARINAS_TIPOS.includes(x.nombre) &&
+    !PREFERMENTO_NAMES.includes(x.nombre) &&
+    x.nombre !== 'Agua'
+  );
+  const otrosHumedad = otrosItemsReceta.reduce((s,x) =>
+    s + harinaBase * x.pct * (HUMEDAD[x.nombre] ?? 0), 0);
+
+  const pfDetalle = {};
+  let aguaPrefermentos = 0;
+  let levPrefermentos = 0;
+  preferIngrs.forEach(pf => {
+    const pfH = harinaTotal * pf.pct;
+    const pfA = pfH * PF_HID[pf.nombre];
+    const pfL = pfH * PF_LEV[pf.nombre];
+    const total = pfH + pfA + pfL;
+    pfDetalle[pf.nombre] = { total, harina: pfH, agua: pfA, lev: pfL };
+    aguaPrefermentos += pfA;
+    levPrefermentos += pfL;
+  });
+
+  // El agua ingresada en la receta es la hidratación final deseada.
+  const aguaObjetivo = harinaTotal * aguaPct;
+  const aguaDirecta = aguaObjetivo - aguaPrefermentos - otrosHumedad;
+  if (aguaDirecta < -0.000001) {
+    return { error: `La hidratación indicada (${(aguaPct*100).toFixed(1)}%) es inferior al agua que ya aportan los prefermentos y otros ingredientes.` };
+  }
+
+  const items = receta.ingredientes.map(ing => {
+    if (HARINAS_TIPOS.includes(ing.nombre)) {
+      const pctDirecto = ing.pct * (1 - pfShareTotal);
+      return { ...ing, pct: pctDirecto, cant: harinaBase * pctDirecto };
+    }
+    if (PREFERMENTO_NAMES.includes(ing.nombre)) {
+      return { ...ing, cant: pfDetalle[ing.nombre].total };
+    }
+    if (ing.nombre === 'Agua') {
+      const fraccion = aguaPct > 0 ? ing.pct / aguaPct : 0;
+      const cant = aguaDirecta * fraccion;
+      return { ...ing, nombre: 'Agua directa', pct: harinaTotal > 0 ? cant / harinaTotal : 0, cant };
+    }
+    return { ...ing, cant: harinaBase * ing.pct };
+  });
+
+  const hidTotal = aguaDirecta + aguaPrefermentos + otrosHumedad;
+  const otrosPct = otrosItemsReceta.reduce((s,x) => s + x.pct, 0);
+  const pesoCrudo = items.reduce((s,x) => s + x.cant, 0);
+  return { items, harinaTotal, hidTotal, pfDetalle, preferIngrs, pesoCrudo, harinaPct, aguaPct, otrosPct, levPrefermentos };
+}
+
 function calcular() {
   const nombre = document.getElementById('recetaSelect').value;
   if (!nombre) { showToast('Primero elegí una receta'); return; }
@@ -600,39 +677,34 @@ function calcular() {
   document.getElementById('masaPreview').textContent =
     `Merma ${((merma-1)*100).toFixed(0)}% → masa cruda: ${Math.round(pesoCrudo)} g`;
 
-  const sumaTotalPct = receta.ingredientes.reduce((s,x) => s + x.pct, 0);
-  const harinaBase = pesoCrudo / sumaTotalPct;
-
-  const items = receta.ingredientes.map(ing => ({ ...ing, cant: harinaBase * ing.pct }));
-
-  const LEV_PCT = 0.01;
-  const PF_DIV   = { 'Poolish': 2.01, 'Biga': 1.51, 'Masa madre': 2 };
-  const PF_AGUA  = { 'Poolish': 1,    'Biga': 0.5,  'Masa madre': 1 };
-
-  const preferIngrs = receta.ingredientes.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
-  const pfDetalle = {};
-  preferIngrs.forEach(pf => {
-    const cantPf = harinaBase * pf.pct;
-    const pfH = cantPf / (PF_DIV[pf.nombre] ?? 2);
-    const pfA = pfH * (PF_AGUA[pf.nombre] ?? 1);
-    const pfL = pf.nombre === 'Masa madre' ? 0 : pfH * LEV_PCT;
-    pfDetalle[pf.nombre] = { total: cantPf, harina: pfH, agua: pfA, lev: pfL };
-  });
-
-  const harinaDirecta = items
-    .filter(x => HARINAS_TIPOS.includes(x.nombre))
-    .reduce((s,x) => s + x.cant, 0);
-  const harinaPf = preferIngrs.reduce((s,pf) => s + pfDetalle[pf.nombre].harina, 0);
-  const harinaTotal = harinaDirecta + harinaPf;
-
-  let hidTotal = 0;
-  items.forEach(({nombre, cant}) => {
-    if (PREFERMENTO_NAMES.includes(nombre)) {
-      hidTotal += pfDetalle[nombre].agua;
-    } else {
-      hidTotal += cant * (HUMEDAD[nombre] ?? 0);
-    }
-  });
+  const preferIngrsReceta = receta.ingredientes.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
+  let harinaBase, items, harinaTotal, hidTotal, pfDetalle, preferIngrs;
+  if (preferIngrsReceta.length) {
+    const harinaPct = receta.ingredientes.filter(x => HARINAS_TIPOS.includes(x.nombre)).reduce((s,x) => s + x.pct, 0);
+    const aguaPct = receta.ingredientes.filter(x => x.nombre === 'Agua').reduce((s,x) => s + x.pct, 0);
+    const otrosPct = receta.ingredientes.filter(x => !HARINAS_TIPOS.includes(x.nombre) && !PREFERMENTO_NAMES.includes(x.nombre) && x.nombre !== 'Agua').reduce((s,x) => s + x.pct, 0);
+    const pfShare = preferIngrsReceta.reduce((s,x) => s + x.pct, 0);
+    const pfLevPct = preferIngrsReceta.reduce((s,x) => s + x.pct * (x.nombre === 'Masa madre' ? 0 : 0.01), 0) * harinaPct;
+    const otrosHumedadPct = receta.ingredientes.filter(x => !HARINAS_TIPOS.includes(x.nombre) && !PREFERMENTO_NAMES.includes(x.nombre) && x.nombre !== 'Agua').reduce((s,x) => s + x.pct * (HUMEDAD[x.nombre] ?? 0), 0);
+    const coefMasa = harinaPct + harinaPct * aguaPct + otrosPct - otrosHumedadPct + pfLevPct;
+    if (coefMasa <= 0) { showToast('No se pudo calcular el peso de la receta'); return; }
+    harinaBase = pesoCrudo / coefMasa;
+    const modelo = modeloConPrefermentos(receta, harinaBase);
+    if (modelo.error) { showToast(modelo.error); return; }
+    items = modelo.items;
+    harinaTotal = modelo.harinaTotal;
+    hidTotal = modelo.hidTotal;
+    pfDetalle = modelo.pfDetalle;
+    preferIngrs = modelo.preferIngrs;
+  } else {
+    const sumaTotalPct = receta.ingredientes.reduce((s,x) => s + x.pct, 0);
+    harinaBase = pesoCrudo / sumaTotalPct;
+    items = receta.ingredientes.map(ing => ({ ...ing, cant: harinaBase * ing.pct }));
+    harinaTotal = items.filter(x => HARINAS_TIPOS.includes(x.nombre)).reduce((s,x) => s + x.cant, 0);
+    hidTotal = items.reduce((s,x) => s + x.cant * (HUMEDAD[x.nombre] ?? 0), 0);
+    pfDetalle = {};
+    preferIngrs = [];
+  }
 
   const harinaItems = items.filter(x => HARINAS_TIPOS.includes(x.nombre) && x.cant > 0);
   const preferItems = items.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
@@ -811,6 +883,15 @@ function guardarReceta() {
 
   const ings = recolectarIngredientes();
   if (!ings.length) { showToast('Agregá al menos un ingrediente'); return; }
+  const preferIngrs = ings.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
+  for (const pf of preferIngrs) {
+    if ((pf.nombre === 'Poolish' || pf.nombre === 'Masa madre') && pf.pct > 0.5000001) {
+      showToast(`${pf.nombre}: no puede superar el 50% de la harina total`); return;
+    }
+  }
+  if (preferIngrs.reduce((s,x) => s + x.pct, 0) > 1.0000001) {
+    showToast('Los prefermentos no pueden superar juntos el 100% de la harina total'); return;
+  }
 
   if (editando) {
     const idx = recetasCustom.findIndex(x => x.nombre === editando);
@@ -897,42 +978,33 @@ function confirmarHarina() {
 }
 
 function recalcularDesdeHarina(receta, harinaTotal) {
-  const PF_DIV = { 'Poolish': 2.01, 'Biga': 1.51, 'Masa madre': 2 };
-  const PF_AGUA = { 'Poolish': 1, 'Biga': 0.5, 'Masa madre': 1 };
-  const LEV_PCT = 0.01;
-
-  const harinasPct = receta.ingredientes
-    .filter(x => HARINAS_TIPOS.includes(x.nombre))
-    .reduce((s,x) => s + x.pct, 0);
-  const pfHarinaFactor = receta.ingredientes
-    .filter(x => PREFERMENTO_NAMES.includes(x.nombre))
-    .reduce((s,x) => s + x.pct / (PF_DIV[x.nombre] ?? 2), 0);
-
-  const harinaBase = harinaTotal / (harinasPct + pfHarinaFactor);
-
-  const sumaTotalPct = receta.ingredientes.reduce((s,x) => s + x.pct, 0);
-  const pesoCrudo = harinaBase * sumaTotalPct;
-
-  const items = receta.ingredientes.map(ing => ({ ...ing, cant: harinaBase * ing.pct }));
-
-  const preferIngrs = receta.ingredientes.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
-  const pfDetalle = {};
-  preferIngrs.forEach(pf => {
-    const cantPf = harinaBase * pf.pct;
-    const pfH = cantPf / (PF_DIV[pf.nombre] ?? 2);
-    const pfA = pfH * (PF_AGUA[pf.nombre] ?? 1);
-    const pfL = pf.nombre === 'Masa madre' ? 0 : pfH * LEV_PCT;
-    pfDetalle[pf.nombre] = { total: cantPf, harina: pfH, agua: pfA, lev: pfL };
-  });
-
-  let hidTotal = 0;
-  items.forEach(({nombre, cant}) => {
-    if (PREFERMENTO_NAMES.includes(nombre)) {
-      hidTotal += pfDetalle[nombre]?.agua ?? 0;
-    } else {
-      hidTotal += cant * (HUMEDAD[nombre] ?? 0);
-    }
-  });
+  const preferIngrsReceta = receta.ingredientes.filter(x => PREFERMENTO_NAMES.includes(x.nombre));
+  let harinaBase, items, hidTotal, pfDetalle, preferIngrs, pesoCrudo;
+  if (preferIngrsReceta.length) {
+    const harinaPct = receta.ingredientes.filter(x => HARINAS_TIPOS.includes(x.nombre)).reduce((s,x) => s + x.pct, 0);
+    const aguaPct = receta.ingredientes.filter(x => x.nombre === 'Agua').reduce((s,x) => s + x.pct, 0);
+    const otrosPct = receta.ingredientes.filter(x => !HARINAS_TIPOS.includes(x.nombre) && !PREFERMENTO_NAMES.includes(x.nombre) && x.nombre !== 'Agua').reduce((s,x) => s + x.pct, 0);
+    const pfLevPct = preferIngrsReceta.reduce((s,x) => s + x.pct * (x.nombre === 'Masa madre' ? 0 : 0.01), 0) * harinaPct;
+    const otrosHumedadPct = receta.ingredientes.filter(x => !HARINAS_TIPOS.includes(x.nombre) && !PREFERMENTO_NAMES.includes(x.nombre) && x.nombre !== 'Agua').reduce((s,x) => s + x.pct * (HUMEDAD[x.nombre] ?? 0), 0);
+    const coefMasa = harinaPct + harinaPct * aguaPct + otrosPct - otrosHumedadPct + pfLevPct;
+    if (coefMasa <= 0 || !harinaPct) { showToast('No se pudo recalcular esta receta'); return; }
+    harinaBase = harinaTotal / harinaPct;
+    const modelo = modeloConPrefermentos(receta, harinaBase);
+    if (modelo.error) { showToast(modelo.error); return; }
+    items = modelo.items;
+    hidTotal = modelo.hidTotal;
+    pfDetalle = modelo.pfDetalle;
+    preferIngrs = modelo.preferIngrs;
+    pesoCrudo = modelo.pesoCrudo;
+  } else {
+    const sumaTotalPct = receta.ingredientes.reduce((s,x) => s + x.pct, 0);
+    harinaBase = harinaTotal / receta.ingredientes.filter(x => HARINAS_TIPOS.includes(x.nombre)).reduce((s,x) => s + x.pct, 0);
+    pesoCrudo = harinaBase * sumaTotalPct;
+    items = receta.ingredientes.map(ing => ({ ...ing, cant: harinaBase * ing.pct }));
+    hidTotal = items.reduce((s,x) => s + x.cant * (HUMEDAD[x.nombre] ?? 0), 0);
+    pfDetalle = {};
+    preferIngrs = [];
+  }
 
   document.getElementById('harinaChipVal').innerHTML =
     `${fmt(harinaTotal)}<small style="font-size:.8rem;opacity:.7"> g</small>`;
